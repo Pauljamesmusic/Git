@@ -1119,15 +1119,33 @@ async function copyText(text, label = '') {
   toast(label ? `Copied! ✅ ${label}` : 'Copied! ✅', 'ok', '📋');
 }
 
-function saveBlob(name, content, mime) {
+/* When this page runs as a published Claude Artifact, the viewer sandbox makes a
+   plain <a download> inert — saves have to go through the host's `downloads`
+   capability. Resolve it once in the background; everywhere else (GitHub Pages,
+   local file, any normal host) the anchor path below is the one that runs. */
+let downloadsApi = null;
+window.claude?.use?.('downloads')?.then(d => { downloadsApi = d; })?.catch(() => {});
+
+/** @returns {Promise<boolean>} true when the file reached the user. */
+async function saveBlob(name, content, mime) {
+  if (downloadsApi) {
+    try {
+      await downloadsApi.save({ filename: name, data: content });
+      return true;
+    } catch (err) {
+      if (err && err.code === 'declined') { toast('Download cancelled', 'info', '🚫'); return false; }
+      // anything else: fall through and try the ordinary anchor
+    }
+  }
   const url = URL.createObjectURL(new Blob([content], { type: mime }));
   const a = document.createElement('a');
   a.href = url; a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return true;
 }
 
-function download(e, fmt) {
+async function download(e, fmt) {
   const stamp = new Date(e.created).toISOString().slice(0, 10);
   const base = `${slug(e.role)}${e.company ? '-' + slug(e.company) : ''}-${stamp}`;
 
@@ -1142,7 +1160,7 @@ function download(e, fmt) {
       '', '---', '', e.text || '_(empty)_',
       e.notes ? `\n---\n\n## Notes\n\n${e.notes}` : ''
     ].filter(Boolean).join('\n');
-    saveBlob(`${base}.md`, md, 'text/markdown;charset=utf-8');
+    if (!await saveBlob(`${base}.md`, md, 'text/markdown;charset=utf-8')) return;
   } else {
     const txt = [
       e.role.toUpperCase(),
@@ -1152,19 +1170,19 @@ function download(e, fmt) {
       '='.repeat(60), '', e.text || '(empty)',
       e.notes ? `\n${'='.repeat(60)}\nNOTES\n\n${e.notes}` : ''
     ].filter(Boolean).join('\n');
-    saveBlob(`${base}.txt`, txt, 'text/plain;charset=utf-8');
+    if (!await saveBlob(`${base}.txt`, txt, 'text/plain;charset=utf-8')) return;
   }
   toast(`Downloaded .${fmt}`, 'ok', '⬇️');
 }
 
-function backupAll() {
+async function backupAll() {
   const payload = {
     app: 'JobVault', version: 1, exportedAt: new Date().toISOString(),
     entries: state.entries, notes: state.notes, prefs: state.prefs
   };
-  saveBlob(`jobvault-backup-${new Date().toISOString().slice(0, 10)}.json`,
+  const ok = await saveBlob(`jobvault-backup-${new Date().toISOString().slice(0, 10)}.json`,
     JSON.stringify(payload, null, 2), 'application/json');
-  toast('Backup downloaded', 'ok', '📦');
+  if (ok) toast('Backup downloaded', 'ok', '📦');
 }
 
 /* ============================================================
