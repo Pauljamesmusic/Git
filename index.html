@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="description" content="JobVault — a private, offline-first vault for your resumes, cover letters and job-application notes.">
+<title>JobVault 🗂️ — Resume &amp; Cover Letter Organizer</title>
+
+<!-- Emoji favicon: no external assets, keeps GitHub Pages deploy a single upload -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============================================================
+     SPLASH  →  shown for ~1.1s, then hands off to login
+     ============================================================ -->
+<div id="splash" role="status" aria-label="Loading JobVault">
+  <div class="splash-mark">
+    <div class="splash-glyph">🗂️</div>
+    <div class="splash-word">JobVault</div>
+    <div class="splash-bar"><i></i></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     LOGIN
+     ============================================================ -->
+<main id="login" class="hidden">
+  <section class="login-card" id="loginCard">
+    <header class="login-head">
+      <span class="login-lock" aria-hidden="true">🔐</span>
+      <h1>Welcome to JobVault</h1>
+      <p>Your resumes &amp; cover letters, locked in one place.</p>
+    </header>
+
+    <form id="loginForm" novalidate autocomplete="on">
+      <div class="field">
+        <label for="user">👤 Username</label>
+        <input class="input" id="user" name="username" type="text"
+               placeholder="paul" autocomplete="username" required
+               aria-describedby="loginError">
+      </div>
+
+      <div class="field">
+        <label for="pass">🔑 Password</label>
+        <div class="pw-wrap">
+          <input class="input" id="pass" name="password" type="password"
+                 placeholder="••••" autocomplete="current-password" required
+                 aria-describedby="loginError">
+          <button type="button" class="pw-toggle" id="pwToggle"
+                  aria-label="Show password" aria-pressed="false">👁️</button>
+        </div>
+      </div>
+
+      <div class="login-row">
+        <label class="check">
+          <input type="checkbox" id="remember" checked>
+          Remember me
+        </label>
+        <span>🔒 Stored locally only</span>
+      </div>
+
+      <button class="btn btn-primary btn-block" type="submit">🚀 Unlock Vault</button>
+      <p class="login-error" id="loginError" role="alert" aria-live="assertive"></p>
+    </form>
+
+    <p class="login-hint">
+      Demo credentials — <code>paul</code> / <code>2557</code><br>
+      Client-side gate only. Do not store secrets you would not paste in a public repo.
+    </p>
+  </section>
+</main>
+
+<!-- ============================================================
+     APP
+     ============================================================ -->
+<div id="app" class="hidden">
+
+  <!-- ---------- top bar ---------- -->
+  <header class="topbar">
+    <div class="topbar-in">
+      <div class="brand">
+        <span class="brand-glyph" aria-hidden="true">🗂️</span>
+        <span class="brand-text">
+          <b>JobVault</b>
+          <span id="brandSub">💼 Your career, organised</span>
+        </span>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="btn btn-icon theme-btn" id="themeBtn"
+                aria-label="Toggle light or dark theme"><span id="themeIcon">🌙</span></button>
+        <button class="btn btn-icon" id="exportAllBtn" aria-label="Export all data as JSON backup" title="Backup vault (JSON)">📦</button>
+        <button class="btn btn-primary" id="newBtn">➕ <span class="hide-sm">New</span></button>
+        <button class="btn btn-icon" id="logoutBtn" aria-label="Log out" title="Log out">🚪</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell">
+
+    <!-- ---------- tabs ---------- -->
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" id="tab-dashboard" data-view="dashboard" aria-selected="true">📊 Dashboard <span class="pill" id="cDash">0</span></button>
+      <button class="tab" role="tab" id="tab-notes"     data-view="notes"     aria-selected="false">📝 Notes <span class="pill" id="cNotes">0</span></button>
+      <button class="tab" role="tab" id="tab-archive"   data-view="archive"   aria-selected="false">📦 Archive <span class="pill" id="cArch">0</span></button>
+      <button class="tab" role="tab" id="tab-trash"     data-view="trash"     aria-selected="false">🗑️ Trash <span class="pill" id="cTrash">0</span></button>
+    </nav>
+
+    <!-- ==========================================================
+         VIEW: DASHBOARD
+         ========================================================== -->
+    <section id="view-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
+
+      <!-- bento: greeting + stats + funnel -->
+      <div class="bento" id="statsBento">
+        <article class="tile hero s6" style="--i:0">
+          <h2 id="greeting">Welcome back, Paul! <span class="wave">👋</span></h2>
+          <p id="todayLine">—</p>
+          <div class="hero-cta">
+            <button class="btn btn-primary btn-sm" id="heroNew">🚀 New entry</button>
+            <button class="btn btn-sm" id="heroNote">📝 Quick note</button>
+          </div>
+        </article>
+
+        <article class="tile stat s3" style="--i:1">
+          <div class="stat-top"><span class="stat-emoji">📄</span></div>
+          <div class="stat-num" data-count="0">0</div>
+          <div class="stat-label">Resumes</div>
+          <div class="stat-spark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </article>
+
+        <article class="tile stat s3" style="--i:2">
+          <div class="stat-top"><span class="stat-emoji">✉️</span></div>
+          <div class="stat-num" data-count="0">0</div>
+          <div class="stat-label">Cover letters</div>
+          <div class="stat-spark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </article>
+
+        <article class="tile stat accent s3" style="--i:3">
+          <div class="stat-top"><span class="stat-emoji">🚀</span></div>
+          <div class="stat-num" data-count="0">0</div>
+          <div class="stat-label">Applications sent</div>
+          <div class="stat-rate" data-rate="applied">
+            <div class="rate-bar"><i></i></div><span>—</span>
+          </div>
+        </article>
+
+        <article class="tile stat s3" style="--i:4">
+          <div class="stat-top"><span class="stat-emoji">🎤</span></div>
+          <div class="stat-num" data-count="0">0</div>
+          <div class="stat-label">Interviews</div>
+          <div class="stat-rate" data-rate="interview">
+            <div class="rate-bar"><i></i></div><span>—</span>
+          </div>
+        </article>
+
+        <article class="tile s6" style="--i:5">
+          <h3 class="tile-title">📈 Pipeline</h3>
+          <div class="funnel" id="funnel"></div>
+        </article>
+      </div>
+
+      <!-- toolbar -->
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="ico" aria-hidden="true">🔍</span>
+          <input class="input" id="search" type="search" placeholder="Search roles, companies, text, tags…"
+                 aria-label="Search entries">
+          <span class="search-kbd" aria-hidden="true">/</span>
+        </div>
+        <div class="filters">
+          <select class="select" id="fType" aria-label="Filter by type">
+            <option value="">All types</option>
+            <option>Resume</option><option>Cover Letter</option><option>Both</option>
+          </select>
+          <select class="select" id="fStatus" aria-label="Filter by status">
+            <option value="">All statuses</option>
+            <option>Saved</option><option>Applied</option><option>Interview</option>
+            <option>Offer</option><option>Rejected</option>
+          </select>
+          <select class="select" id="sort" aria-label="Sort entries">
+            <option value="date-desc">🕒 Newest first</option>
+            <option value="date-asc">🕘 Oldest first</option>
+            <option value="az">🔤 A → Z</option>
+            <option value="za">🔡 Z → A</option>
+            <option value="status">📊 By status</option>
+            <option value="manual">✋ Manual order</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="chips" id="tagChips" aria-label="Filter by tag"></div>
+      <div id="bulkbar"></div>
+      <div class="bento" id="grid"></div>
+    </section>
+
+    <!-- ==========================================================
+         VIEW: NOTES  (quick comments)
+         ========================================================== -->
+    <section id="view-notes" role="tabpanel" aria-labelledby="tab-notes" class="hidden">
+      <div class="bento">
+        <article class="tile s12" style="--i:0">
+          <h3 class="tile-title">📝 Quick note</h3>
+          <form class="note-compose" id="noteForm">
+            <input class="input" id="noteTitle" placeholder="Title — e.g. “Recruiter call · Acme”" aria-label="Note title" maxlength="90">
+            <textarea class="textarea" id="noteBody" rows="3"
+                      placeholder="Type a thought, follow-up, salary number, interview question…" aria-label="Note body"></textarea>
+            <div class="note-compose-row">
+              <div class="note-color-row" id="noteColors" role="radiogroup" aria-label="Note colour"></div>
+              <span class="counter" id="noteCount">0 words · 0 chars</span>
+              <span class="spacer" style="margin-left:auto"></span>
+              <button class="btn btn-primary btn-sm" type="submit">➕ Add note</button>
+            </div>
+          </form>
+        </article>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="ico" aria-hidden="true">🔍</span>
+          <input class="input" id="noteSearch" type="search" placeholder="Search notes…" aria-label="Search notes">
+        </div>
+      </div>
+      <div class="bento" id="noteGrid"></div>
+    </section>
+
+    <!-- ==========================================================
+         VIEW: ARCHIVE
+         ========================================================== -->
+    <section id="view-archive" role="tabpanel" aria-labelledby="tab-archive" class="hidden">
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="ico" aria-hidden="true">🔍</span>
+          <input class="input" id="archSearch" type="search" placeholder="Search archive…" aria-label="Search archive">
+        </div>
+      </div>
+      <div class="bento" id="archGrid"></div>
+    </section>
+
+    <!-- ==========================================================
+         VIEW: TRASH
+         ========================================================== -->
+    <section id="view-trash" role="tabpanel" aria-labelledby="tab-trash" class="hidden">
+      <div class="toolbar">
+        <p style="color:var(--text-dim);font-size:13px">🗑️ Items are kept for <b>30 days</b>, then purged automatically.</p>
+        <span style="margin-left:auto"></span>
+        <button class="btn btn-danger btn-sm" id="emptyTrashBtn">🔥 Empty trash</button>
+      </div>
+      <div class="bento" id="trashGrid"></div>
+    </section>
+
+  </div><!-- /shell -->
+</div><!-- /app -->
+
+<!-- ============================================================
+     MODAL ROOT + TOASTS + CONFETTI
+     ============================================================ -->
+<div id="modalRoot"></div>
+<div id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
+<canvas id="confetti" class="hidden" aria-hidden="true"></canvas>
+
+<script src="script.js"></script>
+</body>
+</html>
