@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Prompt Vault</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%235CE0A0'/><text x='16' y='23' font-family='sans-serif' font-size='19' font-weight='700' text-anchor='middle' fill='%23062418'>P</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<div class="app">
+  <!-- ============ LEFT RAIL ============ -->
+  <aside class="rail" id="rail">
+    <div class="brand">
+      <div class="brand-mark">P</div>
+      <div>
+        <div class="brand-name">Prompt Vault</div>
+        <div class="brand-sub">personal library</div>
+      </div>
+    </div>
+
+    <div class="rail-label">Library</div>
+    <button class="navrow" data-cat="all" aria-current="true">
+      <span class="dot" style="--hue:var(--text-3)"></span>
+      <span class="nm">All prompts</span>
+      <span class="count" id="count-all">0</span>
+    </button>
+
+    <div class="rail-label">Categories</div>
+    <div id="catnav"></div>
+
+    <button class="addcat" id="addcat-btn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      New category
+    </button>
+    <form class="catform" id="catform">
+      <input id="catname" placeholder="Category name" maxlength="40" autocomplete="off">
+      <button class="btn btn-primary" type="submit" style="padding:6px 11px">Add</button>
+    </form>
+    <div class="ghosts" id="ghosts"></div>
+
+    <div class="rail-foot">
+      <div class="backup">
+        <button class="btn" id="export-btn" title="Download every prompt as JSON">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M4 21h16"/></svg>
+          Export
+        </button>
+        <button class="btn" id="import-btn" title="Restore prompts from a backup file">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M8 7l4-4 4 4M4 21h16"/></svg>
+          Import
+        </button>
+      </div>
+      <div class="keyhint"><span>Command palette</span><kbd>⌘K</kbd></div>
+      <div class="keyhint"><span>Search</span><kbd>/</kbd></div>
+      <div class="keyhint"><span>New prompt</span><kbd>N</kbd></div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <div class="topbar">
+      <button class="icon-btn menu-btn" id="menu-btn" aria-label="Open categories">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+
+      <div class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+        <input id="search" placeholder="Search prompts by title…" autocomplete="off" aria-label="Search prompts by title">
+        <kbd class="slash">/</kbd>
+      </div>
+
+      <button class="icon-btn" id="theme-btn" aria-label="Switch theme" title="Switch theme">
+        <svg id="theme-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+
+      <button class="btn btn-primary" id="new-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span class="newlabel">New prompt</span>
+      </button>
+    </div>
+
+    <div class="offline" id="offline">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+      <span id="offline-msg">Can’t reach the server. Your prompts are safe — nothing was saved.</span>
+      <button class="btn" id="retry-btn">Retry</button>
+    </div>
+
+    <div class="boot" id="boot">
+      <div class="spinner"></div>
+      <div>Opening your library…</div>
+    </div>
+
+    <div class="head" id="head" hidden>
+      <div>
+        <h1 id="view-title"><span class="dot" id="view-dot" style="--hue:var(--text-3)"></span><span id="view-name">All prompts</span></h1>
+        <p id="view-sub">—</p>
+      </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="empty" id="empty">
+      <div class="empty-mark">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H17l3 3v11.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5Z"/><path d="M8 10h8M8 14h5"/></svg>
+      </div>
+      <h2 id="empty-title">No prompts yet</h2>
+      <p id="empty-copy">Add your first one and it will show up here.</p>
+      <button class="btn btn-primary" id="empty-cta">Add your first prompt</button>
+    </div>
+  </main>
+</div>
+<div class="rail-scrim" id="rail-scrim"></div>
+
+<!-- ============ VIEW ============ -->
+<div class="scrim" id="m-view">
+  <div class="sheet" style="max-width:720px">
+    <div class="sheet-hd">
+      <span class="chip" id="v-chip"><span class="dot"></span><span id="v-cat"></span></span>
+      <h2 id="v-title"></h2>
+      <button class="icon-btn" data-close aria-label="Close">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="sheet-bd">
+      <div class="meta" id="v-meta" style="margin-bottom:12px"></div>
+      <div class="readout"><pre id="v-body"></pre></div>
+    </div>
+    <div class="sheet-ft">
+      <button class="btn" id="v-edit">Edit</button>
+      <button class="btn btn-ghost" id="v-del" style="color:var(--danger)">Delete</button>
+      <span class="spacer"></span>
+      <button class="btn" id="v-fill">Fill variables…</button>
+      <button class="btn btn-primary" id="v-copy">Copy prompt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADD / EDIT PROMPT ============ -->
+<div class="scrim" id="m-form">
+  <div class="sheet">
+    <div class="sheet-hd">
+      <h2 id="f-heading">New prompt</h2>
+      <button class="icon-btn" data-close aria-label="Close">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="promptform">
+      <div class="sheet-bd">
+        <div class="field">
+          <label for="f-title">Title</label>
+          <input id="f-title" required maxlength="200" placeholder="e.g. Landing page hero rewrite" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="f-cat">Category</label>
+          <select id="f-cat"></select>
+        </div>
+        <div class="field" style="margin-bottom:8px">
+          <label for="f-body">Prompt</label>
+          <textarea id="f-body" required placeholder="Act as a…"></textarea>
+        </div>
+        <p class="hint">Wrap anything you swap per use in square brackets — <b>[target audience]</b> — and it becomes a fillable variable.</p>
+        <div class="err" id="f-err"></div>
+      </div>
+      <div class="sheet-ft">
+        <span class="hint" id="f-stat">0 characters · 0 variables</span>
+        <span class="spacer"></span>
+        <button class="btn" type="button" data-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" id="f-save">Save prompt</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ EDIT CATEGORY ============ -->
+<div class="scrim" id="m-cat">
+  <div class="sheet" style="max-width:460px">
+    <div class="sheet-hd">
+      <h2>Edit category</h2>
+      <button class="icon-btn" data-close aria-label="Close">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="catedit">
+      <div class="sheet-bd">
+        <div class="field">
+          <label for="c-name">Name</label>
+          <input id="c-name" required maxlength="40" autocomplete="off">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Colour</label>
+          <div class="hues" id="c-hues"></div>
+        </div>
+        <div class="err" id="c-err"></div>
+      </div>
+      <div class="sheet-ft">
+        <button class="btn btn-ghost" type="button" id="c-del" style="color:var(--danger)">Delete category</button>
+        <span class="spacer"></span>
+        <button class="btn" type="button" data-close>Cancel</button>
+        <button class="btn btn-primary" type="submit">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ FILL VARIABLES ============ -->
+<div class="scrim" id="m-fill">
+  <div class="sheet">
+    <div class="sheet-hd">
+      <h2>Fill variables</h2>
+      <button class="icon-btn" data-close aria-label="Close">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="sheet-bd">
+      <p class="hint" style="margin:0">Anything left blank keeps its bracket, so you can finish it later.</p>
+      <div class="filler" id="fill-rows"></div>
+    </div>
+    <div class="sheet-ft">
+      <span class="spacer"></span>
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn btn-primary" id="fill-copy">Copy filled prompt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ IMPORT ============ -->
+<div class="scrim" id="m-import">
+  <div class="sheet" style="max-width:520px">
+    <div class="sheet-hd">
+      <h2>Import a backup</h2>
+      <button class="icon-btn" data-close aria-label="Close">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="sheet-bd">
+      <div class="dropzone" id="dropzone" tabindex="0" role="button">
+        <b id="drop-title">Choose a backup file</b>
+        <small id="drop-sub">or drop a .json export here</small>
+      </div>
+      <input type="file" id="file-input" accept="application/json,.json" hidden>
+
+      <div class="modes">
+        <label class="mode" aria-pressed="true">
+          <input type="radio" name="mode" value="merge" checked>
+          <span>
+            <b>Merge into this library</b>
+            <span>Adds what is missing and updates anything the file has a newer copy of. Nothing you have is deleted.</span>
+          </span>
+        </label>
+        <label class="mode destructive" aria-pressed="false">
+          <input type="radio" name="mode" value="replace">
+          <span>
+            <b>Replace everything</b>
+            <span>Wipes all current prompts and categories, then restores the file. Export first if you are not sure.</span>
+          </span>
+        </label>
+      </div>
+      <div class="err" id="i-err"></div>
+    </div>
+    <div class="sheet-ft">
+      <span class="hint" id="i-stat"></span>
+      <span class="spacer"></span>
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn btn-primary" id="i-go" disabled>Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CONFIRM (prompt / category delete, destructive import) ============ -->
+<div class="scrim" id="m-confirm">
+  <div class="sheet" style="max-width:440px">
+    <div class="sheet-hd"><h2 id="k-title">Are you sure?</h2></div>
+    <div class="sheet-bd"><p style="margin:0;color:var(--text-2)" id="k-body"></p></div>
+    <div class="sheet-ft">
+      <span class="spacer"></span>
+      <button class="btn" id="k-no">Cancel</button>
+      <button class="btn btn-danger" id="k-yes">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ COMMAND PALETTE ============ -->
+<div class="scrim" id="m-pal">
+  <div class="sheet pal">
+    <input id="pal-input" placeholder="Jump to a prompt or category…" autocomplete="off">
+    <div class="pal-list" id="pal-list"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copied</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
